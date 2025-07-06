@@ -3,49 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mint NFTs</title>
+  <title>Mint Your NFT</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #111;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
       color: #fff;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     header {
+      width: 100%;
+      padding: 1em 2em;
+      background: rgba(0,0,0,0.6);
       display: flex;
       justify-content: space-between;
-      padding: 1em 2em;
-      background-color: #222;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    h1, h2 {
+      margin: 0;
+    }
+    main {
+      max-width: 800px;
+      width: 100%;
+      padding: 2em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .preview-container {
+      background: #fff;
+      border-radius: 20px;
+      padding: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      margin: 2em 0;
+    }
+    svg {
+      display: block;
+      border-radius: 10px;
     }
     .btn {
-      padding: 12px 24px;
-      margin: 1em;
+      padding: 14px 28px;
+      margin: 0.5em;
+      font-size: 1rem;
+      font-weight: 600;
       border: none;
+      border-radius: 10px;
       cursor: pointer;
-      font-size: 1em;
-      border-radius: 6px;
-      transition: 0.3s;
+      transition: all 0.3s ease;
+    }
+    .wallet-btn {
+      background: #00bcd4;
+      color: white;
+    }
+    .wallet-btn:hover {
+      background: #0097a7;
     }
     .mint-btn {
       background: #4caf50;
       color: white;
     }
     .mint-btn:hover {
-      background: #45a049;
-    }
-    .wallet-btn {
-      background: #008cba;
-      color: white;
-    }
-    .wallet-btn:hover {
-      background: #007bb5;
+      background: #388e3c;
     }
     #status {
-      margin-top: 2em;
-      font-weight: bold;
-      color: #00ff99;
+      margin-top: 1.5em;
+      padding: 1em 2em;
+      background: #212121;
+      border-left: 6px solid #00e676;
+      border-radius: 5px;
+      display: none;
+    }
+    @media (max-width: 600px) {
+      .btn {
+        width: 100%;
+      }
+      header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
     }
   </style>
 </head>
@@ -58,14 +106,32 @@
 
   <main>
     <h1>Mint Your NFT</h1>
+
+    <!-- NFT Preview -->
+    <div class="preview-container">
+      <svg xmlns="http://www.w3.org/2000/svg" width="250" height="350" viewBox="0 0 250 350">
+        <rect width="100%" height="100%" rx="15" ry="15" fill="white" stroke="black" stroke-width="4"/>
+        <text x="15" y="35" font-family="serif" font-size="28" fill="black">A</text>
+        <text x="15" y="60" font-family="serif" font-size="28" fill="black">♠</text>
+        <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="100" fill="black">♠</text>
+        <g transform="rotate(180, 230, 320)">
+          <text x="215" y="305" font-family="serif" font-size="28" fill="black">A</text>
+          <text x="215" y="330" font-family="serif" font-size="28" fill="black">♠</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Mint Buttons -->
     <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
     <button id="paidMintBtn" class="btn mint-btn">Paid Mint (0.001 ETH)</button>
+
+    <!-- Status Message -->
     <div id="status"></div>
   </main>
 
   <script>
     const CONTRACT_ADDRESS = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const BASE_SEPOLIA_CHAIN_ID = "0x14A34"; // 846000 in hex
+    const BASE_SEPOLIA_CHAIN_ID = "0x14A34"; // 846000
 
     const ABI = [
       {
@@ -147,11 +213,17 @@
         }
 
         await tx.wait();
-        statusDiv.textContent = "🎉 Mint successful!";
+        showStatus("🎉 Mint successful!", true);
       } catch (error) {
         console.error(error);
-        statusDiv.textContent = "❌ Mint failed. See console.";
+        showStatus("❌ Mint failed. See console.", false);
       }
+    }
+
+    function showStatus(message, success) {
+      statusDiv.style.display = "block";
+      statusDiv.textContent = message;
+      statusDiv.style.borderLeftColor = success ? "#00e676" : "#f44336";
     }
 
     connectButton.onclick = connectWallet;
