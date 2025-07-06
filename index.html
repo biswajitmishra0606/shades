@@ -61,7 +61,7 @@
 
   <script>
     const contractAddress = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const baseSepoliaChainId = "0x14A34"; // Base Sepolia Chain ID
+    const baseSepoliaChainId = "0x14A34";
 
     const abi = [
       {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"freeMint","outputs":[],"stateMutability":"nonpayable","type":"function"},
@@ -77,26 +77,26 @@
     async function connectWallet() {
       if (window.ethereum) {
         try {
-          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+          const chainId = await ethereum.request({ method: 'eth_chainId' });
           if (chainId !== baseSepoliaChainId) {
-            await window.ethereum.request({
+            await ethereum.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: baseSepoliaChainId }]
             });
           }
 
           web3 = new Web3(window.ethereum);
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
           account = accounts[0];
           document.getElementById("walletAddress").innerText = "Connected: " + account;
           contract = new web3.eth.Contract(abi, contractAddress);
           updateTotalMinted();
         } catch (error) {
-          document.getElementById("status").innerText = "Wallet connection failed or user rejected network switch.";
+          document.getElementById("status").innerText = "⚠️ Wallet connection failed.";
           console.error(error);
         }
       } else {
-        alert("MetaMask not detected. Please install MetaMask.");
+        alert("MetaMask not found. Install it first.");
       }
     }
 
@@ -112,11 +112,11 @@
     async function freeMint() {
       const amount = parseInt(document.getElementById("freeMintAmount").value);
       if (!contract || !account || !amount || amount < 1 || amount > 25) {
-        document.getElementById("status").innerText = "Enter a valid amount for Free Mint.";
+        document.getElementById("status").innerText = "⚠️ Enter valid free mint amount.";
         return;
       }
       try {
-        document.getElementById("status").innerText = "Free minting...";
+        document.getElementById("status").innerText = "Minting free NFTs...";
         await contract.methods.freeMint(amount).send({ from: account });
         document.getElementById("status").innerText = "✅ Free mint successful!";
         updateTotalMinted();
@@ -129,23 +129,28 @@
     async function paidMint() {
       const amount = parseInt(document.getElementById("paidMintAmount").value);
       if (!contract || !account || !amount || amount < 1 || amount > 25) {
-        document.getElementById("status").innerText = "Enter a valid amount for Paid Mint.";
+        document.getElementById("status").innerText = "⚠️ Enter valid paid mint amount.";
         return;
       }
       try {
         const price = await contract.methods.PRICE().call();
         const totalPrice = web3.utils.toBN(price).mul(web3.utils.toBN(amount));
-        const tx = {
+        const encodedData = contract.methods.paidMint(amount).encodeABI();
+
+        const txParams = {
           from: account,
           to: contractAddress,
-          value: totalPrice.toString(),
-          data: contract.methods.paidMint(amount).encodeABI()
+          value: web3.utils.toHex(totalPrice),
+          data: encodedData,
+          gas: '300000'
         };
-        document.getElementById("status").innerText = "Processing paid mint...";
-        await window.ethereum.request({
+
+        document.getElementById("status").innerText = "Minting paid NFTs...";
+        await ethereum.request({
           method: 'eth_sendTransaction',
-          params: [tx]
+          params: [txParams]
         });
+
         document.getElementById("status").innerText = "✅ Paid mint successful!";
         updateTotalMinted();
       } catch (err) {
@@ -154,5 +159,6 @@
       }
     }
   </script>
+
 </body>
 </html>
