@@ -7,64 +7,96 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: #121212;
+      background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
       color: #fff;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     header {
+      width: 100%;
+      padding: 1em 2em;
+      background: rgba(0,0,0,0.6);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1em 2em;
-      background-color: #1f1f1f;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
-    h1, h2 {
-      margin: 0;
+    main {
+      max-width: 800px;
+      width: 100%;
+      padding: 2em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .preview-container {
+      background: #fff;
+      border-radius: 20px;
+      padding: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      margin: 2em 0;
     }
     .btn {
-      padding: 12px 24px;
-      margin: 1em;
+      padding: 14px 28px;
+      margin: 0.5em;
+      font-size: 1rem;
+      font-weight: 600;
       border: none;
+      border-radius: 10px;
       cursor: pointer;
-      font-size: 1em;
-      border-radius: 6px;
-      transition: 0.3s;
+      transition: all 0.3s ease;
+    }
+    .wallet-btn {
+      background: #00bcd4;
+      color: white;
+    }
+    .wallet-btn:hover {
+      background: #0097a7;
     }
     .mint-btn {
       background: #4caf50;
       color: white;
     }
-    .wallet-btn {
-      background: #008cba;
-      color: white;
+    .mint-btn:hover {
+      background: #388e3c;
     }
     .mint-btn:disabled {
       background: #888;
       cursor: not-allowed;
     }
     #status {
-      margin-top: 1em;
-      font-weight: bold;
-      color: #00ff99;
+      margin-top: 1.5em;
+      padding: 1em 2em;
+      background: #212121;
+      border-left: 6px solid #00e676;
+      border-radius: 5px;
+      display: none;
     }
-    .preview-container {
-      background: #fff;
-      display: inline-block;
+    #mintAmount {
+      width: 60px;
       padding: 10px;
-      border-radius: 12px;
+      font-size: 1rem;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid #ccc;
       margin: 1em 0;
     }
-    input[type="number"] {
-      width: 60px;
-      padding: 0.5em;
-      font-size: 1em;
-      text-align: center;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      margin-bottom: 1em;
+    #supplyStats {
+      margin-top: 1.5em;
+      font-size: 1.1rem;
+      color: #ffeb3b;
+    }
+    @media (max-width: 600px) {
+      .btn { width: 100%; }
+      header { flex-direction: column; gap: 10px; text-align: center; }
     }
   </style>
 </head>
@@ -78,6 +110,7 @@
   <main>
     <h1>Mint Your NFT</h1>
 
+    <!-- NFT Preview -->
     <div class="preview-container">
       <svg xmlns="http://www.w3.org/2000/svg" width="250" height="350" viewBox="0 0 250 350">
         <rect width="100%" height="100%" rx="15" ry="15" fill="white" stroke="black" stroke-width="4"/>
@@ -91,16 +124,18 @@
       </svg>
     </div>
 
-    <div>
-      <input type="number" id="mintAmount" value="1" min="1" max="25" />
-    </div>
+    <!-- Mint Amount Input -->
+    <input type="number" id="mintAmount" value="1" min="1" max="25" />
 
-    <div>
-      <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
-      <button id="paidMintBtn" class="btn mint-btn">Paid Mint</button>
-    </div>
+    <!-- Mint Buttons -->
+    <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
+    <button id="paidMintBtn" class="btn mint-btn">Paid Mint (0.001 ETH)</button>
 
+    <!-- Status Message -->
     <div id="status"></div>
+
+    <!-- Supply Info -->
+    <div id="supplyStats"></div>
   </main>
 
   <script>
@@ -110,30 +145,30 @@
 
     const ABI = [
       {
-        "inputs": [{"internalType":"uint256","name":"amount","type":"uint256"}],
-        "name":"freeMint",
-        "outputs":[],
-        "stateMutability":"nonpayable",
-        "type":"function"
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "freeMint",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
       },
       {
-        "inputs": [{"internalType":"uint256","name":"amount","type":"uint256"}],
-        "name":"paidMint",
-        "outputs":[],
-        "stateMutability":"payable",
-        "type":"function"
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "paidMint",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
       },
       {
         "inputs": [],
         "name": "PRICE",
-        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
         "stateMutability": "view",
         "type": "function"
       },
       {
         "inputs": [],
         "name": "totalMinted",
-        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
         "stateMutability": "view",
         "type": "function"
       }
@@ -145,18 +180,19 @@
     const freeMintBtn = document.getElementById("freeMintBtn");
     const paidMintBtn = document.getElementById("paidMintBtn");
     const statusDiv = document.getElementById("status");
+    const supplyStats = document.getElementById("supplyStats");
     const mintAmountInput = document.getElementById("mintAmount");
 
     async function connectWallet() {
-      if (!window.ethereum) return alert("MetaMask not installed");
+      if (!window.ethereum) return alert("MetaMask not detected!");
 
       try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+        const chainId = await ethereum.request({ method: "eth_chainId" });
 
-        const chainId = await window.ethereum.request({ method: "eth_chainId" });
         if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
             params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }]
           });
         }
@@ -165,23 +201,42 @@
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-        const address = await signer.getAddress();
-        connectButton.textContent = address.slice(0, 6) + "..." + address.slice(-4);
+        connectButton.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
         connectButton.disabled = true;
 
+        updateSupplyInfo();
       } catch (err) {
         console.error(err);
-        alert("Wallet connection failed");
+        alert("Wallet connection failed.");
       }
     }
 
+    async function updateSupplyInfo() {
+      if (!contract) return;
+      try {
+        const minted = await contract.totalMinted();
+        supplyStats.textContent = `🧾 Total Minted: ${minted} / ${MAX_SUPPLY}`;
+
+        if (Number(minted) >= MAX_SUPPLY) {
+          disableMinting();
+          showStatus("❌ Sold Out", false);
+        }
+      } catch (err) {
+        console.error("Supply fetch failed", err);
+      }
+    }
+
+    function disableMinting() {
+      freeMintBtn.disabled = true;
+      paidMintBtn.disabled = true;
+    }
+
     async function mint(type) {
-      if (!signer || !contract) return alert("Please connect your wallet");
+      if (!signer || !contract) return alert("Connect wallet first.");
 
       const amount = parseInt(mintAmountInput.value);
-      if (amount < 1 || amount > 25) {
-        statusDiv.textContent = "❌ Mint amount must be between 1 and 25.";
-        return;
+      if (isNaN(amount) || amount < 1 || amount > 25) {
+        return showStatus("Please enter a mint amount between 1 and 25.", false);
       }
 
       try {
@@ -194,18 +249,26 @@
         }
 
         await tx.wait();
-        const minted = await contract.totalMinted();
-        if (Number(minted) >= MAX_SUPPLY) {
-          freeMintBtn.disabled = true;
-          paidMintBtn.disabled = true;
-          statusDiv.textContent = "❌ Sold Out";
+        showStatus("🎉 Mint successful!", true);
+        updateSupplyInfo();
+      } catch (error) {
+        console.error(error);
+        if (
+          error?.message?.toLowerCase().includes("sold out") ||
+          error?.message?.toLowerCase().includes("exceeds")
+        ) {
+          disableMinting();
+          showStatus("❌ Sold Out", false);
         } else {
-          statusDiv.textContent = "🎉 Mint successful!";
+          showStatus("❌ Mint failed", false);
         }
-      } catch (err) {
-        console.error(err);
-        statusDiv.textContent = "❌ Mint failed.";
       }
+    }
+
+    function showStatus(message, success) {
+      statusDiv.style.display = "block";
+      statusDiv.textContent = message;
+      statusDiv.style.borderLeftColor = success ? "#00e676" : "#f44336";
     }
 
     connectButton.onclick = connectWallet;
