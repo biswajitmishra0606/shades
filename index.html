@@ -61,7 +61,7 @@
 
   <script>
     const contractAddress = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const baseSepoliaChainId = "0x14A34"; // Base Sepolia Chain ID (decimal: 846001)
+    const baseSepoliaChainId = "0x14A34"; // Base Sepolia Chain ID
 
     const abi = [
       {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"freeMint","outputs":[],"stateMutability":"nonpayable","type":"function"},
@@ -135,11 +135,16 @@
       try {
         const price = await contract.methods.PRICE().call();
         const totalPrice = web3.utils.toBN(price).mul(web3.utils.toBN(amount));
-
-        document.getElementById("status").innerText = "Processing paid mint...";
-        await contract.methods.paidMint(amount).send({
+        const tx = {
           from: account,
-          value: totalPrice.toString()
+          to: contractAddress,
+          value: totalPrice.toString(),
+          data: contract.methods.paidMint(amount).encodeABI()
+        };
+        document.getElementById("status").innerText = "Processing paid mint...";
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [tx]
         });
         document.getElementById("status").innerText = "✅ Paid mint successful!";
         updateTotalMinted();
