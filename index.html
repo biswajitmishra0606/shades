@@ -110,7 +110,6 @@
   <main>
     <h1>Mint Your NFT</h1>
 
-    <!-- NFT Preview -->
     <div class="preview-container">
       <svg xmlns="http://www.w3.org/2000/svg" width="250" height="350" viewBox="0 0 250 350">
         <rect width="100%" height="100%" rx="15" ry="15" fill="white" stroke="black" stroke-width="4"/>
@@ -124,17 +123,11 @@
       </svg>
     </div>
 
-    <!-- Mint Amount Input -->
     <input type="number" id="mintAmount" value="1" min="1" max="25" />
-
-    <!-- Mint Buttons -->
     <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
     <button id="paidMintBtn" class="btn mint-btn">Paid Mint (0.001 ETH)</button>
 
-    <!-- Status Message -->
     <div id="status"></div>
-
-    <!-- Supply Info -->
     <div id="supplyStats"></div>
   </main>
 
@@ -143,39 +136,9 @@
     const BASE_SEPOLIA_CHAIN_ID = "0x14A34";
     const MAX_SUPPLY = 52;
 
-    const ABI = [
-      {
-        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
-        "name": "freeMint",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
-        "name": "paidMint",
-        "outputs": [],
-        "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "PRICE",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "totalMinted",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
+    const ABI = JSON.parse(`[PUT YOUR FULL ABI JSON HERE]`);
 
     let provider, signer, contract;
-
     const connectButton = document.getElementById("connectButton");
     const freeMintBtn = document.getElementById("freeMintBtn");
     const paidMintBtn = document.getElementById("paidMintBtn");
@@ -216,7 +179,6 @@
       try {
         const minted = await contract.totalMinted();
         supplyStats.textContent = `🧾 Total Minted: ${minted} / ${MAX_SUPPLY}`;
-
         if (Number(minted) >= MAX_SUPPLY) {
           disableMinting();
           showStatus("❌ Sold Out", false);
@@ -233,7 +195,6 @@
 
     async function mint(type) {
       if (!signer || !contract) return alert("Connect wallet first.");
-
       const amount = parseInt(mintAmountInput.value);
       if (isNaN(amount) || amount < 1 || amount > 25) {
         return showStatus("Please enter a mint amount between 1 and 25.", false);
@@ -253,10 +214,7 @@
         updateSupplyInfo();
       } catch (error) {
         console.error(error);
-        if (
-          error?.message?.toLowerCase().includes("sold out") ||
-          error?.message?.toLowerCase().includes("exceeds")
-        ) {
+        if (error?.message?.toLowerCase().includes("sold out") || error?.message?.toLowerCase().includes("exceeds")) {
           disableMinting();
           showStatus("❌ Sold Out", false);
         } else {
