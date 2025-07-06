@@ -3,162 +3,160 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Shades NFT Mint</title>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <title>Mint NFTs</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <style>
     body {
+      margin: 0;
+      font-family: Arial, sans-serif;
       background: #111;
       color: #fff;
-      font-family: Arial, sans-serif;
       text-align: center;
-      padding: 2rem;
     }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #00df9a;
+    header {
+      display: flex;
+      justify-content: space-between;
+      padding: 1em 2em;
+      background-color: #222;
+    }
+    .btn {
+      padding: 12px 24px;
+      margin: 1em;
       border: none;
-      border-radius: 6px;
       cursor: pointer;
-      color: #000;
+      font-size: 1em;
+      border-radius: 6px;
+      transition: 0.3s;
     }
-    input {
-      padding: 10px;
-      font-size: 16px;
-      width: 100px;
-      margin-right: 10px;
+    .mint-btn {
+      background: #4caf50;
+      color: white;
     }
-    .mint-box {
-      margin-top: 20px;
+    .mint-btn:hover {
+      background: #45a049;
+    }
+    .wallet-btn {
+      background: #008cba;
+      color: white;
+    }
+    .wallet-btn:hover {
+      background: #007bb5;
+    }
+    #status {
+      margin-top: 2em;
+      font-weight: bold;
+      color: #00ff99;
     }
   </style>
 </head>
 <body>
 
-  <h1>🃏 Shades NFT Mint</h1>
+  <header>
+    <h2>NFT Minting DApp</h2>
+    <button id="connectButton" class="btn wallet-btn">Connect Wallet</button>
+  </header>
 
-  <div>
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <p id="walletAddress">Wallet not connected</p>
-  </div>
-
-  <div class="mint-box">
-    <h3>Total Minted: <span id="totalMinted">0</span> / 52</h3>
-  </div>
-
-  <div class="mint-box">
-    <input type="number" id="freeMintAmount" placeholder="1-25" min="1" max="25" />
-    <button onclick="freeMint()">Free Mint</button>
-  </div>
-
-  <div class="mint-box">
-    <input type="number" id="paidMintAmount" placeholder="1-25" min="1" max="25" />
-    <button onclick="paidMint()">Paid Mint</button>
-  </div>
-
-  <p id="status"></p>
+  <main>
+    <h1>Mint Your NFT</h1>
+    <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
+    <button id="paidMintBtn" class="btn mint-btn">Paid Mint (0.001 ETH)</button>
+    <div id="status"></div>
+  </main>
 
   <script>
-    const contractAddress = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const baseSepoliaChainId = "0x14A34";
+    const CONTRACT_ADDRESS = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
+    const BASE_SEPOLIA_CHAIN_ID = "0x14A34"; // 846000 in hex
 
-    const abi = [
-      {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"freeMint","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"paidMint","outputs":[],"stateMutability":"payable","type":"function"},
-      {"inputs":[],"name":"PRICE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+    const ABI = [
+      {
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "freeMint",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "paidMint",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "PRICE",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      }
     ];
 
-    let web3;
+    let provider;
+    let signer;
     let contract;
-    let account;
+
+    const connectButton = document.getElementById("connectButton");
+    const freeMintBtn = document.getElementById("freeMintBtn");
+    const paidMintBtn = document.getElementById("paidMintBtn");
+    const statusDiv = document.getElementById("status");
 
     async function connectWallet() {
-      if (window.ethereum) {
-        try {
-          const chainId = await ethereum.request({ method: 'eth_chainId' });
-          if (chainId !== baseSepoliaChainId) {
-            await ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: baseSepoliaChainId }]
-            });
-          }
+      if (!window.ethereum) {
+        alert("MetaMask not detected!");
+        return;
+      }
 
-          web3 = new Web3(window.ethereum);
-          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-          account = accounts[0];
-          document.getElementById("walletAddress").innerText = "Connected: " + account;
-          contract = new web3.eth.Contract(abi, contractAddress);
-          updateTotalMinted();
-        } catch (error) {
-          document.getElementById("status").innerText = "⚠️ Wallet connection failed.";
-          console.error(error);
+      try {
+        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+        const chainId = await ethereum.request({ method: "eth_chainId" });
+
+        if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }]
+          });
         }
-      } else {
-        alert("MetaMask not found. Install it first.");
-      }
-    }
 
-    async function updateTotalMinted() {
-      try {
-        const total = await contract.methods.totalMinted().call();
-        document.getElementById("totalMinted").innerText = total;
-      } catch (err) {
-        console.error("Failed to fetch total minted", err);
-      }
-    }
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    async function freeMint() {
-      const amount = parseInt(document.getElementById("freeMintAmount").value);
-      if (!contract || !account || !amount || amount < 1 || amount > 25) {
-        document.getElementById("status").innerText = "⚠️ Enter valid free mint amount.";
-        return;
-      }
-      try {
-        document.getElementById("status").innerText = "Minting free NFTs...";
-        await contract.methods.freeMint(amount).send({ from: account });
-        document.getElementById("status").innerText = "✅ Free mint successful!";
-        updateTotalMinted();
+        connectButton.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+        connectButton.disabled = true;
       } catch (err) {
         console.error(err);
-        document.getElementById("status").innerText = "❌ Free mint failed.";
+        alert("Connection failed.");
       }
     }
 
-    async function paidMint() {
-      const amount = parseInt(document.getElementById("paidMintAmount").value);
-      if (!contract || !account || !amount || amount < 1 || amount > 25) {
-        document.getElementById("status").innerText = "⚠️ Enter valid paid mint amount.";
+    async function mint(type) {
+      if (!signer || !contract) {
+        alert("Connect wallet first.");
         return;
       }
+
+      const amount = 1;
+
       try {
-        const price = await contract.methods.PRICE().call();
-        const totalPrice = web3.utils.toBN(price).mul(web3.utils.toBN(amount));
-        const encodedData = contract.methods.paidMint(amount).encodeABI();
+        let tx;
+        if (type === "free") {
+          tx = await contract.freeMint(amount);
+        } else {
+          const price = await contract.PRICE();
+          tx = await contract.paidMint(amount, { value: price });
+        }
 
-        const txParams = {
-          from: account,
-          to: contractAddress,
-          value: web3.utils.toHex(totalPrice),
-          data: encodedData,
-          gas: '300000'
-        };
-
-        document.getElementById("status").innerText = "Minting paid NFTs...";
-        await ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [txParams]
-        });
-
-        document.getElementById("status").innerText = "✅ Paid mint successful!";
-        updateTotalMinted();
-      } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Paid mint failed.";
+        await tx.wait();
+        statusDiv.textContent = "🎉 Mint successful!";
+      } catch (error) {
+        console.error(error);
+        statusDiv.textContent = "❌ Mint failed. See console.";
       }
     }
+
+    connectButton.onclick = connectWallet;
+    freeMintBtn.onclick = () => mint("free");
+    paidMintBtn.onclick = () => mint("paid");
   </script>
-
 </body>
 </html>
