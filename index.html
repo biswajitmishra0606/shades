@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shades NFT Mint</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🃏 Shades NFT Mint</h1>
+    <p>Mint your unique playing card on <strong>Base Sepolia</strong></p>
+
+    <button id="connectButton">Connect Wallet</button>
+    <div id="wallet" class="wallet-address"></div>
+
+    <div class="mint-section">
+      <p><strong>Total Minted:</strong> <span id="totalMinted">Loading...</span> / 52</p>
+
+      <div class="mint-controls">
+        <input id="mintAmount" type="number" min="1" max="25" placeholder="Amount (1–25)" />
+        <button id="freeMint">Free Mint</button>
+        <button id="paidMint">Paid Mint (0.0001 ETH each)</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const CONTRACT_ADDRESS = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
+    const ABI = [/* PASTE YOUR FULL ABI HERE (the array you gave above) */];
+
+    let web3;
+    let contract;
+    let userAddress;
+
+    window.addEventListener("load", async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
+        updateTotalMinted();
+      } else {
+        alert("Please install MetaMask to use this site.");
+      }
+    });
+
+    document.getElementById("connectButton").onclick = async () => {
+      try {
+        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+        userAddress = accounts[0];
+        document.getElementById("wallet").innerText = `Connected: ${userAddress}`;
+        updateTotalMinted();
+      } catch (err) {
+        console.error("Connection error", err);
+        alert("Could not connect wallet");
+      }
+    };
+
+    async function updateTotalMinted() {
+      try {
+        const minted = await contract.methods.totalMinted().call();
+        document.getElementById("totalMinted").innerText = minted;
+      } catch (err) {
+        console.error("Minted fetch failed", err);
+      }
+    }
+
+    document.getElementById("freeMint").onclick = async () => {
+      const amount = parseInt(document.getElementById("mintAmount").value);
+      if (!amount || amount < 1 || amount > 25) return alert("Enter a valid amount (1–25)");
+
+      try {
+        await contract.methods.freeMint(amount).send({ from: userAddress });
+        document.getElementById("status").innerText = `✅ Free minted ${amount} NFT(s)!`;
+        updateTotalMinted();
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Free mint failed.";
+        console.error(err);
+      }
+    };
+
+    document.getElementById("paidMint").onclick = async () => {
+      const amount = parseInt(document.getElementById("mintAmount").value);
+      if (!amount || amount < 1 || amount > 25) return alert("Enter a valid amount (1–25)");
+
+      const pricePerNFT = web3.utils.toWei("0.0001", "ether");
+      const totalCost = web3.utils.toBN(pricePerNFT).mul(web3.utils.toBN(amount));
+
+      try {
+        await contract.methods.paidMint(amount).send({
+          from: userAddress,
+          value: totalCost
+        });
+        document.getElementById("status").innerText = `✅ Paid minted ${amount} NFT(s)!`;
+        updateTotalMinted();
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Paid mint failed.";
+        console.error(err);
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .wallet-address {
+      font-size: 14px;
+      color: #4b5563;
+      margin-top: 10px;
+    }
+
+    .mint-section {
+      margin-top: 20px;
+    }
+
+    .mint-controls {
+      margin: 20px 0;
+    }
+
+    input[type="number"] {
+      padding: 10px;
+      width: 180px;
+      font-size: 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .status {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #10b981;
+    }
+  </style>
+</body>
+</html>
