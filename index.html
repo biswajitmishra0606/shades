@@ -61,7 +61,7 @@
 
   <script>
     const contractAddress = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const targetChainId = "0x14A34"; // Base Sepolia chain ID in hex
+    const baseSepoliaChainId = "0x14A34"; // Base Sepolia Chain ID (decimal: 846001)
 
     const abi = [
       {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"freeMint","outputs":[],"stateMutability":"nonpayable","type":"function"},
@@ -78,9 +78,11 @@
       if (window.ethereum) {
         try {
           const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-          if (chainId !== targetChainId) {
-            document.getElementById("status").innerText = "Please switch to Base Sepolia network.";
-            return;
+          if (chainId !== baseSepoliaChainId) {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: baseSepoliaChainId }]
+            });
           }
 
           web3 = new Web3(window.ethereum);
@@ -90,7 +92,7 @@
           contract = new web3.eth.Contract(abi, contractAddress);
           updateTotalMinted();
         } catch (error) {
-          document.getElementById("status").innerText = "Wallet connection failed.";
+          document.getElementById("status").innerText = "Wallet connection failed or user rejected network switch.";
           console.error(error);
         }
       } else {
@@ -142,7 +144,7 @@
         document.getElementById("status").innerText = "✅ Paid mint successful!";
         updateTotalMinted();
       } catch (err) {
-        console.error("Paid mint failed", err);
+        console.error(err);
         document.getElementById("status").innerText = "❌ Paid mint failed.";
       }
     }
