@@ -68,6 +68,10 @@
     .mint-btn:hover {
       background: #388e3c;
     }
+    .mint-btn:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
     #status {
       margin-top: 1.5em;
       padding: 1em 2em;
@@ -219,9 +223,19 @@
         const minted = await contract.totalMinted();
         const supply = await contract.totalSupply();
         supplyStats.textContent = `🧾 Total Minted: ${minted} / ${supply}`;
+
+        if (Number(minted) >= Number(supply)) {
+          disableMinting();
+          showStatus("❌ Sold Out", false);
+        }
       } catch (err) {
-        console.error("Failed to fetch supply info", err);
+        console.error("Supply fetch failed", err);
       }
+    }
+
+    function disableMinting() {
+      freeMintBtn.disabled = true;
+      paidMintBtn.disabled = true;
     }
 
     async function mint(type) {
@@ -246,7 +260,12 @@
         updateSupplyInfo();
       } catch (error) {
         console.error(error);
-        showStatus("❌ Mint failed. See console.", false);
+        if (error?.message?.includes("sold out") || error?.message?.includes("exceeds total supply")) {
+          disableMinting();
+          showStatus("❌ Sold Out", false);
+        } else {
+          showStatus("❌ Mint failed", false);
+        }
       }
     }
 
