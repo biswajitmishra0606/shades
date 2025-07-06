@@ -7,9 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
@@ -31,9 +29,6 @@
       z-index: 10;
       box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
-    h1, h2 {
-      margin: 0;
-    }
     main {
       max-width: 800px;
       width: 100%;
@@ -48,10 +43,6 @@
       padding: 10px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
       margin: 2em 0;
-    }
-    svg {
-      display: block;
-      border-radius: 10px;
     }
     .btn {
       padding: 14px 28px;
@@ -85,15 +76,23 @@
       border-radius: 5px;
       display: none;
     }
+    #mintAmount {
+      width: 60px;
+      padding: 10px;
+      font-size: 1rem;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin: 1em 0;
+    }
+    #supplyStats {
+      margin-top: 1.5em;
+      font-size: 1.1rem;
+      color: #ffeb3b;
+    }
     @media (max-width: 600px) {
-      .btn {
-        width: 100%;
-      }
-      header {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-      }
+      .btn { width: 100%; }
+      header { flex-direction: column; gap: 10px; text-align: center; }
     }
   </style>
 </head>
@@ -121,17 +120,23 @@
       </svg>
     </div>
 
+    <!-- Mint Amount Input -->
+    <input type="number" id="mintAmount" value="1" min="1" max="25" />
+
     <!-- Mint Buttons -->
     <button id="freeMintBtn" class="btn mint-btn">Free Mint</button>
     <button id="paidMintBtn" class="btn mint-btn">Paid Mint (0.001 ETH)</button>
 
     <!-- Status Message -->
     <div id="status"></div>
+
+    <!-- Supply Info -->
+    <div id="supplyStats"></div>
   </main>
 
   <script>
     const CONTRACT_ADDRESS = "0x3764c901B946cd1F30CA0502A9B754ef48245104";
-    const BASE_SEPOLIA_CHAIN_ID = "0x14A34"; // 846000
+    const BASE_SEPOLIA_CHAIN_ID = "0x14A34";
 
     const ABI = [
       {
@@ -154,23 +159,34 @@
         "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
         "stateMutability": "view",
         "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalMinted",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
       }
     ];
 
-    let provider;
-    let signer;
-    let contract;
+    let provider, signer, contract;
 
     const connectButton = document.getElementById("connectButton");
     const freeMintBtn = document.getElementById("freeMintBtn");
     const paidMintBtn = document.getElementById("paidMintBtn");
     const statusDiv = document.getElementById("status");
+    const supplyStats = document.getElementById("supplyStats");
+    const mintAmountInput = document.getElementById("mintAmount");
 
     async function connectWallet() {
-      if (!window.ethereum) {
-        alert("MetaMask not detected!");
-        return;
-      }
+      if (!window.ethereum) return alert("MetaMask not detected!");
 
       try {
         const accounts = await ethereum.request({ method: "eth_requestAccounts" });
@@ -189,19 +205,32 @@
 
         connectButton.textContent = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
         connectButton.disabled = true;
+
+        updateSupplyInfo();
       } catch (err) {
         console.error(err);
-        alert("Connection failed.");
+        alert("Wallet connection failed.");
+      }
+    }
+
+    async function updateSupplyInfo() {
+      if (!contract) return;
+      try {
+        const minted = await contract.totalMinted();
+        const supply = await contract.totalSupply();
+        supplyStats.textContent = `🧾 Total Minted: ${minted} / ${supply}`;
+      } catch (err) {
+        console.error("Failed to fetch supply info", err);
       }
     }
 
     async function mint(type) {
-      if (!signer || !contract) {
-        alert("Connect wallet first.");
-        return;
-      }
+      if (!signer || !contract) return alert("Connect wallet first.");
 
-      const amount = 1;
+      const amount = parseInt(mintAmountInput.value);
+      if (isNaN(amount) || amount < 1 || amount > 25) {
+        return showStatus("Please enter a mint amount between 1 and 25.", false);
+      }
 
       try {
         let tx;
@@ -209,11 +238,12 @@
           tx = await contract.freeMint(amount);
         } else {
           const price = await contract.PRICE();
-          tx = await contract.paidMint(amount, { value: price });
+          tx = await contract.paidMint(amount, { value: price * BigInt(amount) });
         }
 
         await tx.wait();
         showStatus("🎉 Mint successful!", true);
+        updateSupplyInfo();
       } catch (error) {
         console.error(error);
         showStatus("❌ Mint failed. See console.", false);
